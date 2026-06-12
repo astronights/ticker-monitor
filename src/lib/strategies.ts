@@ -12,8 +12,8 @@ export const STRATEGIES: StrategyDef[] = [
     key: 'sma_cross',
     label: 'SMA Crossover',
     params: [
-      { key: 'fast', label: 'Fast period', default: 20, min: 2, max: 200 },
-      { key: 'slow', label: 'Slow period', default: 50, min: 5, max: 400 },
+      { key: 'fast', label: 'Fast period', default: 20, min: 2, max: 200, grid: [10, 20, 50] },
+      { key: 'slow', label: 'Slow period', default: 50, min: 5, max: 400, grid: [50, 100, 200] },
     ],
     run: (candles, p) => {
       const closes = candles.map((c) => c.c);
@@ -24,8 +24,8 @@ export const STRATEGIES: StrategyDef[] = [
     key: 'ema_cross',
     label: 'EMA Crossover',
     params: [
-      { key: 'fast', label: 'Fast period', default: 12, min: 2, max: 200 },
-      { key: 'slow', label: 'Slow period', default: 26, min: 5, max: 400 },
+      { key: 'fast', label: 'Fast period', default: 12, min: 2, max: 200, grid: [9, 12, 21] },
+      { key: 'slow', label: 'Slow period', default: 26, min: 5, max: 400, grid: [26, 50, 100] },
     ],
     run: (candles, p) => {
       const closes = candles.map((c) => c.c);
@@ -36,9 +36,9 @@ export const STRATEGIES: StrategyDef[] = [
     key: 'rsi_reversion',
     label: 'RSI Mean Reversion',
     params: [
-      { key: 'period', label: 'RSI period', default: 14, min: 2, max: 100 },
-      { key: 'buyBelow', label: 'Buy below', default: 30, min: 5, max: 50 },
-      { key: 'sellAbove', label: 'Sell above', default: 70, min: 50, max: 95 },
+      { key: 'period', label: 'RSI period', default: 14, min: 2, max: 100, grid: [7, 14, 21] },
+      { key: 'buyBelow', label: 'Buy below', default: 30, min: 5, max: 50, grid: [25, 30, 35] },
+      { key: 'sellAbove', label: 'Sell above', default: 70, min: 50, max: 95, grid: [65, 70, 75] },
     ],
     run: (candles, p) => {
       const r = rsi(candles.map((c) => c.c), p.period);
@@ -58,9 +58,9 @@ export const STRATEGIES: StrategyDef[] = [
     key: 'macd_cross',
     label: 'MACD Cross',
     params: [
-      { key: 'fast', label: 'Fast EMA', default: 12, min: 2, max: 100 },
-      { key: 'slow', label: 'Slow EMA', default: 26, min: 5, max: 200 },
-      { key: 'signal', label: 'Signal period', default: 9, min: 2, max: 50 },
+      { key: 'fast', label: 'Fast EMA', default: 12, min: 2, max: 100, grid: [8, 12] },
+      { key: 'slow', label: 'Slow EMA', default: 26, min: 5, max: 200, grid: [21, 26] },
+      { key: 'signal', label: 'Signal period', default: 9, min: 2, max: 50, grid: [9] },
     ],
     run: (candles, p) => {
       const { macd: m, signal: s } = macd(candles.map((c) => c.c), p.fast, p.slow, p.signal);
@@ -71,8 +71,8 @@ export const STRATEGIES: StrategyDef[] = [
     key: 'bollinger_reversion',
     label: 'Bollinger Reversion',
     params: [
-      { key: 'period', label: 'Period', default: 20, min: 5, max: 100 },
-      { key: 'mult', label: 'Std-dev mult', default: 2, min: 1, max: 4 },
+      { key: 'period', label: 'Period', default: 20, min: 5, max: 100, grid: [14, 20, 30] },
+      { key: 'mult', label: 'Std-dev mult', default: 2, min: 1, max: 4, grid: [1.5, 2, 2.5] },
     ],
     run: (candles, p) => {
       const closes = candles.map((c) => c.c);
@@ -93,8 +93,8 @@ export const STRATEGIES: StrategyDef[] = [
     key: 'donchian_breakout',
     label: 'Donchian Breakout',
     params: [
-      { key: 'entry', label: 'Entry lookback', default: 20, min: 5, max: 200 },
-      { key: 'exit', label: 'Exit lookback', default: 10, min: 3, max: 100 },
+      { key: 'entry', label: 'Entry lookback', default: 20, min: 5, max: 200, grid: [10, 20, 55] },
+      { key: 'exit', label: 'Exit lookback', default: 10, min: 3, max: 100, grid: [5, 10, 20] },
     ],
     run: (candles, p) => {
       const highs = candles.map((c) => c.h);
@@ -117,9 +117,9 @@ export const STRATEGIES: StrategyDef[] = [
     key: 'stochastic_reversion',
     label: 'Stochastic Reversion',
     params: [
-      { key: 'period', label: '%K period', default: 14, min: 3, max: 100 },
-      { key: 'buyBelow', label: 'Buy below', default: 20, min: 5, max: 40 },
-      { key: 'sellAbove', label: 'Sell above', default: 80, min: 60, max: 95 },
+      { key: 'period', label: '%K period', default: 14, min: 3, max: 100, grid: [9, 14, 21] },
+      { key: 'buyBelow', label: 'Buy below', default: 20, min: 5, max: 40, grid: [15, 20, 25] },
+      { key: 'sellAbove', label: 'Sell above', default: 80, min: 60, max: 95, grid: [75, 80, 85] },
     ],
     run: (candles, p) => {
       const { d } = stochastic(
@@ -144,7 +144,7 @@ export const STRATEGIES: StrategyDef[] = [
     key: 'roc_momentum',
     label: 'Momentum (ROC)',
     params: [
-      { key: 'period', label: 'Lookback', default: 60, min: 5, max: 300 },
+      { key: 'period', label: 'Lookback', default: 60, min: 5, max: 300, grid: [20, 60, 120] },
     ],
     run: (candles, p) => {
       const r = roc(candles.map((c) => c.c), p.period);
@@ -169,4 +169,17 @@ export function runStrategy(
   const def = getStrategy(key);
   if (!def) throw new Error(`Unknown strategy: ${key}`);
   return def.run(candles, { ...defaultParams(def), ...params });
+}
+
+/**
+ * All parameter combinations to try in grid search (cartesian product of each
+ * param's `grid`). Combos where a fast period >= slow period are dropped.
+ */
+export function paramGrid(def: StrategyDef): Record<string, number>[] {
+  let combos: Record<string, number>[] = [{}];
+  for (const p of def.params) {
+    const values = p.grid ?? [p.default];
+    combos = combos.flatMap((c) => values.map((v) => ({ ...c, [p.key]: v })));
+  }
+  return combos.filter((c) => !('fast' in c && 'slow' in c) || c.fast < c.slow);
 }

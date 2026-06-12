@@ -23,7 +23,15 @@ export type Signal = 'long' | 'flat';
 export interface StrategyDef {
   key: string;
   label: string;
-  params: { key: string; label: string; default: number; min: number; max: number }[];
+  params: {
+    key: string;
+    label: string;
+    default: number;
+    min: number;
+    max: number;
+    /** Values to try in grid search (defaults to just the default value). */
+    grid?: number[];
+  }[];
   /** Returns desired position for every bar (same length as candles). */
   run: (candles: Candle[], params: Record<string, number>) => Signal[];
 }

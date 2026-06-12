@@ -146,6 +146,9 @@ button.danger-solid { background: var(--red); }
   width: 100%;
 }
 
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable.sorted { color: var(--accent); }
+
 tr.clickable { cursor: pointer; }
 tr.clickable:hover td { background: rgba(47, 129, 247, 0.05); }
 tr.focused td { background: rgba(47, 129, 247, 0.12); }
