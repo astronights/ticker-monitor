@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { sma, ema, rsi } from '../src/lib/indicators';
 import { backtest } from '../src/lib/backtest';
 import { aggregateToHourly } from '../src/lib/aggregate';
-import { STRATEGIES, defaultParams } from '../src/lib/strategies';
+import { STRATEGIES, defaultParams, paramGrid } from '../src/lib/strategies';
 import type { Candle } from '../src/lib/types';
 
 // --- indicators ---
@@ -41,6 +41,20 @@ for (const def of STRATEGIES) {
   assert.ok(Number.isFinite(res.stats.totalReturnPct), `${def.key}: finite return`);
   assert.ok(res.stats.maxDrawdownPct >= 0 && res.stats.maxDrawdownPct <= 100, `${def.key}: drawdown bounds`);
 }
+// --- grid search: every combo is valid and runs ---
+let totalCombos = 0;
+for (const def of STRATEGIES) {
+  const combos = paramGrid(def);
+  assert.ok(combos.length >= 1, `${def.key}: has combos`);
+  for (const p of combos) {
+    if ('fast' in p && 'slow' in p) assert.ok(p.fast < p.slow, `${def.key}: fast<slow`);
+    const res = backtest(def.key, candles, p, '1d');
+    assert.ok(Number.isFinite(res.stats.totalReturnPct), `${def.key} grid combo runs`);
+  }
+  totalCombos += combos.length;
+}
+console.log(`grid search space: ${totalCombos} parameter combos across ${STRATEGIES.length} strategies`);
+
 const trend = backtest('sma_cross', candles, { fast: 10, slow: 30 }, '1d');
 assert.ok(trend.stats.trades > 0, 'sma_cross should trade on an oscillating trend');
 assert.ok(trend.stats.totalReturnPct > 0, 'sma_cross should profit on a rising trend');
