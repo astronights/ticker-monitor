@@ -20,8 +20,9 @@ const RANGES = [
 export default function BacktestPage() {
   const [tickers, setTickers] = useState<Ticker[]>([]);
   const [tickerId, setTickerId] = useState<number | null>(null);
-  const [interval, setInterval_] = useState('1d');
-  const [rangeDays, setRangeDays] = useState(365);
+  const [interval, setInterval_] = useState('15m');
+  const [rangeDays, setRangeDays] = useState(30);
+  const [focus, setFocus] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set(['sma_cross', 'rsi_reversion']));
   const [params, setParams] = useState<Record<string, Record<string, number>>>(
     Object.fromEntries(STRATEGIES.map((s) => [s.key, defaultParams(s)]))
@@ -69,7 +70,9 @@ export default function BacktestPage() {
         );
       }
       setCandles(data);
-      setResults([...selected].map((key) => backtest(key, data, params[key], interval)));
+      const out = [...selected].map((key) => backtest(key, data, params[key], interval));
+      setResults(out);
+      setFocus(out[0]?.strategy ?? null);
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     }
@@ -114,9 +117,9 @@ export default function BacktestPage() {
           <div>
             <label>Bars</label>
             <select value={interval} onChange={(e) => setInterval_(e.target.value)}>
-              <option value="1d">Daily</option>
-              <option value="1h">1 hour</option>
               <option value="15m">15 min</option>
+              <option value="1h">1 hour</option>
+              <option value="1d">Daily</option>
             </select>
           </div>
           <div>
@@ -134,10 +137,14 @@ export default function BacktestPage() {
               ))}
             </div>
           </div>
-          <button onClick={run} disabled={busy || !selected.size} style={{ marginLeft: 'auto' }}>
-            {busy ? 'Running…' : `Run ${selected.size} ${selected.size === 1 ? 'strategy' : 'strategies'}`}
-          </button>
         </div>
+        <button
+          onClick={run}
+          disabled={busy || !selected.size}
+          style={{ width: '100%', marginTop: 14 }}
+        >
+          {busy ? 'Running…' : `Run ${selected.size} ${selected.size === 1 ? 'strategy' : 'strategies'}`}
+        </button>
       </div>
 
       <div className="panel">
@@ -187,8 +194,27 @@ export default function BacktestPage() {
       {results && (
         <>
           <div className="panel">
+            <h2 style={{ marginTop: 0 }}>
+              Price & trades
+              {focus && (
+                <span className="muted" style={{ fontWeight: 400 }}>
+                  {' '}— {results.find((r) => r.strategy === focus)?.label}
+                </span>
+              )}
+            </h2>
+            <Chart
+              candles={candles}
+              markers={results.find((r) => r.strategy === focus)?.markers}
+              height={330}
+            />
+            <p className="muted" style={{ marginBottom: 0 }}>
+              ▲▼ show where the highlighted strategy bought and sold. Tap a row in the results
+              table to switch strategy.
+            </p>
+          </div>
+          <div className="panel">
             <h2 style={{ marginTop: 0 }}>Equity curves (normalized)</h2>
-            <Chart lines={equityLines} height={360} />
+            <Chart lines={equityLines} height={300} />
             <div className="row" style={{ marginTop: 8 }}>
               {equityLines.map((l) => (
                 <span key={l.label} style={{ fontSize: 13 }}>
@@ -222,7 +248,11 @@ export default function BacktestPage() {
                   <td className="num muted">—</td>
                 </tr>
                 {results.map((r) => (
-                  <tr key={r.strategy}>
+                  <tr
+                    key={r.strategy}
+                    className={`clickable ${focus === r.strategy ? 'focused' : ''}`}
+                    onClick={() => setFocus(r.strategy)}
+                  >
                     <td>
                       {r.label}
                       {r.stats.totalReturnPct === bestReturn && results.length > 1 && ' 🏆'}
