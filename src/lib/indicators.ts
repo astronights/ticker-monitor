@@ -86,3 +86,59 @@ export function bollinger(
   }
   return { upper, mid, lower };
 }
+
+/** Stochastic %K (raw), smoothed with a 3-period SMA into %D. */
+export function stochastic(
+  highs: number[],
+  lows: number[],
+  closes: number[],
+  period: number
+): { k: number[]; d: number[] } {
+  const k = new Array<number>(closes.length).fill(NaN);
+  for (let i = period - 1; i < closes.length; i++) {
+    let hi = -Infinity;
+    let lo = Infinity;
+    for (let j = i - period + 1; j <= i; j++) {
+      hi = Math.max(hi, highs[j]);
+      lo = Math.min(lo, lows[j]);
+    }
+    k[i] = hi === lo ? 50 : ((closes[i] - lo) / (hi - lo)) * 100;
+  }
+  const start = k.findIndex((v) => !Number.isNaN(v));
+  const d = new Array<number>(closes.length).fill(NaN);
+  if (start >= 0) {
+    const smoothed = sma(k.slice(start), 3);
+    for (let i = 0; i < smoothed.length; i++) d[start + i] = smoothed[i];
+  }
+  return { k, d };
+}
+
+/** Rate of change over `period` bars, in percent. */
+export function roc(values: number[], period: number): number[] {
+  const out = new Array<number>(values.length).fill(NaN);
+  for (let i = period; i < values.length; i++) {
+    out[i] = (values[i] / values[i - period] - 1) * 100;
+  }
+  return out;
+}
+
+/** Rolling highest-high / lowest-low over the previous `period` bars (excluding current). */
+export function donchian(
+  highs: number[],
+  lows: number[],
+  period: number
+): { upper: number[]; lower: number[] } {
+  const upper = new Array<number>(highs.length).fill(NaN);
+  const lower = new Array<number>(lows.length).fill(NaN);
+  for (let i = period; i < highs.length; i++) {
+    let hi = -Infinity;
+    let lo = Infinity;
+    for (let j = i - period; j < i; j++) {
+      hi = Math.max(hi, highs[j]);
+      lo = Math.min(lo, lows[j]);
+    }
+    upper[i] = hi;
+    lower[i] = lo;
+  }
+  return { upper, lower };
+}

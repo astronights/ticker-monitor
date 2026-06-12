@@ -22,7 +22,8 @@ export async function GET() {
       const { count } = await sb
         .from('candles')
         .select('ts', { count: 'exact', head: true })
-        .eq('ticker_id', t.id);
+        .eq('ticker_id', t.id)
+        .eq('interval', '15m');
       return { ...t, latest_15m: await latest('15m'), latest_1d: await latest('1d'), bars: count ?? 0 };
     })
   );
