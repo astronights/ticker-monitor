@@ -146,7 +146,11 @@ button.danger-solid { background: var(--red); }
   width: 100%;
 }
 
-.preset-group { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+tr.clickable { cursor: pointer; }
+tr.clickable:hover td { background: rgba(47, 129, 247, 0.05); }
+tr.focused td { background: rgba(47, 129, 247, 0.12); }
+
+.preset-group { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 6px; overflow-x: auto; max-width: 100%; width: fit-content; }
 .preset-group button {
   background: var(--bg);
   color: var(--muted);
@@ -171,10 +175,10 @@ button.danger-solid { background: var(--red); }
 }
 .strat-card.selected { border-color: var(--accent); }
 .strat-card .strat-head { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-.strat-card .strat-params { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-.strat-card .strat-params > span { display: flex; flex-direction: column; gap: 2px; }
-.strat-card .strat-params input { width: 76px; padding: 5px 8px; font-size: 14px; }
-.strat-card .strat-params .pname { color: var(--muted); font-size: 12px; }
+.strat-params { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.strat-params > span { display: flex; flex-direction: column; gap: 2px; }
+.strat-params input { width: 76px; padding: 5px 8px; font-size: 14px; }
+.strat-params .pname { color: var(--muted); font-size: 12px; }
 
 /* ---- mobile ---- */
 @media (max-width: 640px) {
@@ -207,4 +211,5 @@ button.danger-solid { background: var(--red); }
   .ticker-name { display: none; }
   .signal-banner { font-size: 15px; }
   .strat-grid { grid-template-columns: 1fr; }
+  .watch-btn { width: 100%; }
 }

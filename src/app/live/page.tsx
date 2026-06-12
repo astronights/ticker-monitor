@@ -150,23 +150,26 @@ function LiveInner() {
               <option value="1h">1 hour</option>
             </select>
           </div>
-          {strategy.params.map((p) => (
-            <div key={p.key}>
-              <label>{p.label}</label>
-              <input
-                type="number"
-                style={{ width: 80 }}
-                value={params[strategyKey][p.key]}
-                onChange={(e) =>
-                  setParams({
-                    ...params,
-                    [strategyKey]: { ...params[strategyKey], [p.key]: Number(e.target.value) },
-                  })
-                }
-              />
-            </div>
-          ))}
         </div>
+        {strategy.params.length > 0 && (
+          <div className="strat-params" style={{ marginTop: 12 }}>
+            {strategy.params.map((p) => (
+              <span key={p.key}>
+                <span className="pname">{p.label}</span>
+                <input
+                  type="number"
+                  value={params[strategyKey][p.key]}
+                  onChange={(e) =>
+                    setParams({
+                      ...params,
+                      [strategyKey]: { ...params[strategyKey], [p.key]: Number(e.target.value) },
+                    })
+                  }
+                />
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {signal && (
@@ -191,7 +194,7 @@ function LiveInner() {
       <div className="panel">
         <div className="row" style={{ justifyContent: 'space-between' }}>
           <h2 style={{ margin: 0 }}>Push alerts</h2>
-          <button onClick={enablePushAndWatch} disabled={!tickerId}>
+          <button className="watch-btn" onClick={enablePushAndWatch} disabled={!tickerId}>
             🔔 Watch {symbol} · {strategy.label} ({interval})
           </button>
         </div>

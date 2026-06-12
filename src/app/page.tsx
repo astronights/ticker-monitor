@@ -32,7 +32,6 @@ function ago(ts: string | null): string {
 export default function Dashboard() {
   const [tickers, setTickers] = useState<TickerStatus[]>([]);
   const [symbol, setSymbol] = useState('');
-  const [name, setName] = useState('');
   const [preset, setPreset] = useState(0);
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
@@ -56,7 +55,6 @@ export default function Dashboard() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         symbol,
-        name,
         exchange: p.exchange,
         timezone: p.timezone,
         market_open: p.open,
@@ -66,7 +64,6 @@ export default function Dashboard() {
     setBusy('');
     if (res.ok) {
       setSymbol('');
-      setName('');
       load();
     } else {
       setMsg((await res.json()).error ?? 'failed');
@@ -163,7 +160,7 @@ export default function Dashboard() {
 
       <div className="panel">
         <h2 style={{ marginTop: 0 }}>Add ticker</h2>
-        <form onSubmit={addTicker} className="row">
+        <form onSubmit={addTicker} className="row" style={{ alignItems: 'flex-end' }}>
           <div>
             <label>Yahoo symbol</label>
             <input
@@ -174,10 +171,6 @@ export default function Dashboard() {
             />
           </div>
           <div>
-            <label>Name (optional)</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div>
             <label>Market</label>
             <select value={preset} onChange={(e) => setPreset(Number(e.target.value))}>
               {TZ_PRESETS.map((p, i) => (
@@ -185,7 +178,7 @@ export default function Dashboard() {
               ))}
             </select>
           </div>
-          <div style={{ alignSelf: 'flex-end' }}>
+          <div>
             <button disabled={busy === 'add'}>Add</button>
           </div>
         </form>
