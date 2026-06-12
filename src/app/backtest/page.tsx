@@ -175,6 +175,7 @@ export default function BacktestPage() {
             <Chart lines={equityLines} height={360} />
           </div>
           <div className="panel">
+            <div className="table-wrap">
             <table>
               <thead>
                 <tr>
@@ -203,6 +204,7 @@ export default function BacktestPage() {
                 ))}
               </tbody>
             </table>
+            </div>
             <p className="muted">
               Long-only, all-in/all-out, 5 bps per side. Past performance ≠ future results.
             </p>

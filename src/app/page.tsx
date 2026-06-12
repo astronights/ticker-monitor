@@ -109,15 +109,16 @@ export default function Dashboard() {
             Backfill history (all)
           </button>
         </div>
+        <div className="table-wrap">
         <table style={{ marginTop: 10 }}>
           <thead>
             <tr>
               <th>Symbol</th>
-              <th>Name</th>
-              <th>Exchange</th>
+              <th className="hide-sm">Name</th>
+              <th className="hide-sm">Exchange</th>
               <th className="num">Bars</th>
               <th>Last 15m</th>
-              <th>Last daily</th>
+              <th className="hide-sm">Last daily</th>
               <th />
             </tr>
           </thead>
@@ -125,11 +126,11 @@ export default function Dashboard() {
             {tickers.map((t) => (
               <tr key={t.id}>
                 <td><strong>{t.symbol}</strong></td>
-                <td className="muted">{t.name}</td>
-                <td className="muted">{t.exchange}</td>
+                <td className="muted hide-sm">{t.name}</td>
+                <td className="muted hide-sm">{t.exchange}</td>
                 <td className="num">{t.bars.toLocaleString()}</td>
                 <td>{ago(t.latest_15m)}</td>
-                <td>{ago(t.latest_1d)}</td>
+                <td className="hide-sm">{ago(t.latest_1d)}</td>
                 <td style={{ textAlign: 'right' }}>
                   <span className="row" style={{ justifyContent: 'flex-end' }}>
                     <button
@@ -147,10 +148,11 @@ export default function Dashboard() {
               </tr>
             ))}
             {!tickers.length && (
-              <tr><td colSpan={7} className="muted">No tickers yet — run supabase/schema.sql first.</td></tr>
+              <tr><td colSpan={7} className="muted">No tickers yet — apply the Supabase migrations first.</td></tr>
             )}
           </tbody>
         </table>
+        </div>
         {msg && <p className="muted">{msg}</p>}
       </div>
 

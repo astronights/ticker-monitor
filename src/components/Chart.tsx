@@ -30,8 +30,10 @@ export default function Chart({ candles, lines, markers, height = 420 }: Props) 
 
   useEffect(() => {
     if (!ref.current) return;
+    // Keep charts compact on phones
+    const effectiveHeight = window.innerWidth < 640 ? Math.min(height, 300) : height;
     const chart = createChart(ref.current, {
-      height,
+      height: effectiveHeight,
       layout: {
         background: { type: ColorType.Solid, color: '#161b22' },
         textColor: '#8b949e',

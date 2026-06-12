@@ -22,7 +22,7 @@ function LiveInner() {
     search.get('ticker') ? Number(search.get('ticker')) : null
   );
   const [strategyKey, setStrategyKey] = useState(search.get('strategy') ?? 'sma_cross');
-  const [interval, setInterval_] = useState<'15m' | '1h'>('1h');
+  const [interval, setInterval_] = useState<'15m' | '1h'>('15m');
   const [params, setParams] = useState<Record<string, Record<string, number>>>(
     Object.fromEntries(STRATEGIES.map((s) => [s.key, defaultParams(s)]))
   );
@@ -146,8 +146,8 @@ function LiveInner() {
           <div>
             <label>Signal bars</label>
             <select value={interval} onChange={(e) => setInterval_(e.target.value as '15m' | '1h')}>
-              <option value="1h">1 hour</option>
               <option value="15m">15 min</option>
+              <option value="1h">1 hour</option>
             </select>
           </div>
           {strategy.params.map((p) => (
@@ -196,6 +196,7 @@ function LiveInner() {
           </button>
         </div>
         {pushState && <p>{pushState}</p>}
+        <div className="table-wrap">
         <table style={{ marginTop: 10 }}>
           <thead>
             <tr>
@@ -221,6 +222,7 @@ function LiveInner() {
             {!alerts.length && <tr><td colSpan={5} className="muted">No alerts yet.</td></tr>}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
