@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     ticker_id: Number(body.ticker_id),
     strategy: String(body.strategy ?? ''),
     params: body.params ?? {},
-    signal_interval: body.signal_interval === '15m' ? '15m' : '1h',
+    signal_interval: body.signal_interval === '1h' ? '1h' : '15m',
   };
   if (!row.ticker_id || !row.strategy) {
     return NextResponse.json({ error: 'ticker_id and strategy required' }, { status: 400 });

@@ -75,7 +75,7 @@ input, select {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 10px;
-  font-size: 14px;
+  font-size: 16px; /* >=16px prevents iOS auto-zoom on focus */
 }
 label { color: var(--muted); font-size: 13px; display: block; margin-bottom: 4px; }
 
@@ -111,3 +111,37 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 .login-wrap { display: flex; min-height: 90vh; align-items: center; justify-content: center; }
 .error { color: var(--red); font-size: 14px; }
+
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-wrap table { min-width: 480px; }
+
+/* ---- mobile ---- */
+@media (max-width: 640px) {
+  main { padding: 14px 10px calc(84px + env(safe-area-inset-bottom)); }
+
+  /* nav becomes a fixed bottom tab bar */
+  nav {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-bottom: none;
+    border-top: 1px solid var(--border);
+    justify-content: space-around;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  }
+  nav .brand { display: none; }
+  nav a { flex: 1; text-align: center; padding: 12px 0; }
+
+  h1 { font-size: 19px; margin-bottom: 12px; }
+  .panel { padding: 12px; }
+
+  /* form rows: full-width stacked controls */
+  .row > div { flex: 1 1 45%; min-width: 130px; }
+  .row select, .row input { width: 100%; }
+  button { padding: 11px 14px; }
+
+  th.hide-sm, td.hide-sm { display: none; }
+  .signal-banner { font-size: 15px; }
+}
