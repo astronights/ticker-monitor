@@ -23,6 +23,7 @@ const TZ_PRESETS = [
 function ago(ts: string | null): string {
   if (!ts) return '—';
   const mins = Math.round((Date.now() - new Date(ts).getTime()) / 60000);
+  if (mins < 1) return 'just now';
   if (mins < 60) return `${mins}m ago`;
   if (mins < 60 * 48) return `${Math.round(mins / 60)}h ago`;
   return `${Math.round(mins / 1440)}d ago`;
@@ -35,6 +36,7 @@ export default function Dashboard() {
   const [preset, setPreset] = useState(0);
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
+  const [toDelete, setToDelete] = useState<TickerStatus | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/status');
@@ -71,9 +73,10 @@ export default function Dashboard() {
     }
   }
 
-  async function removeTicker(id: number, sym: string) {
-    if (!confirm(`Remove ${sym} and all its data?`)) return;
-    await fetch(`/api/tickers?id=${id}`, { method: 'DELETE' });
+  async function confirmDelete() {
+    if (!toDelete) return;
+    await fetch(`/api/tickers?id=${toDelete.id}`, { method: 'DELETE' });
+    setToDelete(null);
     load();
   }
 
@@ -106,53 +109,55 @@ export default function Dashboard() {
         <div className="row" style={{ justifyContent: 'space-between' }}>
           <h2 style={{ margin: 0 }}>Tracked tickers</h2>
           <button className="secondary" onClick={backfillAll} disabled={!!busy}>
-            Backfill history (all)
+            Backfill all
           </button>
         </div>
-        <div className="table-wrap">
         <table style={{ marginTop: 10 }}>
           <thead>
             <tr>
               <th>Symbol</th>
-              <th className="hide-sm">Name</th>
-              <th className="hide-sm">Exchange</th>
-              <th className="num">Bars</th>
-              <th>Last 15m</th>
-              <th className="hide-sm">Last daily</th>
-              <th />
+              <th>Last updated</th>
+              <th className="num">15m bars</th>
+              <th style={{ width: 90 }} />
             </tr>
           </thead>
           <tbody>
             {tickers.map((t) => (
               <tr key={t.id}>
-                <td><strong>{t.symbol}</strong></td>
-                <td className="muted hide-sm">{t.name}</td>
-                <td className="muted hide-sm">{t.exchange}</td>
-                <td className="num">{t.bars.toLocaleString()}</td>
+                <td>
+                  <strong>{t.symbol}</strong>
+                  {t.name && <span className="muted ticker-name"> {t.name}</span>}
+                </td>
                 <td>{ago(t.latest_15m)}</td>
-                <td className="hide-sm">{ago(t.latest_1d)}</td>
-                <td style={{ textAlign: 'right' }}>
-                  <span className="row" style={{ justifyContent: 'flex-end' }}>
+                <td className="num">{t.bars.toLocaleString()}</td>
+                <td>
+                  <span className="row" style={{ justifyContent: 'flex-end', gap: 6, flexWrap: 'nowrap' }}>
                     <button
-                      className="secondary"
+                      className="icon-btn"
+                      title={`Backfill ${t.symbol} history`}
+                      aria-label={`Backfill ${t.symbol}`}
                       disabled={!!busy}
                       onClick={() => backfill(t.id, t.symbol)}
                     >
-                      {busy === `bf-${t.id}` ? '…' : 'Backfill'}
+                      {busy === `bf-${t.id}` ? '…' : '⟳'}
                     </button>
-                    <button className="danger" onClick={() => removeTicker(t.id, t.symbol)}>
-                      ✕
+                    <button
+                      className="icon-btn danger-icon"
+                      title={`Remove ${t.symbol}`}
+                      aria-label={`Remove ${t.symbol}`}
+                      onClick={() => setToDelete(t)}
+                    >
+                      🗑
                     </button>
                   </span>
                 </td>
               </tr>
             ))}
             {!tickers.length && (
-              <tr><td colSpan={7} className="muted">No tickers yet — apply the Supabase migrations first.</td></tr>
+              <tr><td colSpan={4} className="muted">No tickers yet — apply the Supabase migrations first.</td></tr>
             )}
           </tbody>
         </table>
-        </div>
         {msg && <p className="muted">{msg}</p>}
       </div>
 
@@ -186,9 +191,25 @@ export default function Dashboard() {
         </form>
         <p className="muted">
           BSE symbols end in .BO, NSE in .NS, SGX in .SI (Yahoo Finance conventions). After adding,
-          hit Backfill to load history.
+          hit ⟳ to load history.
         </p>
       </div>
+
+      {toDelete && (
+        <div className="modal-backdrop" onClick={() => setToDelete(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ marginTop: 0 }}>Remove {toDelete.symbol}?</h2>
+            <p className="muted">
+              This deletes the ticker, all its collected candles, and any alerts on it.
+              This cannot be undone.
+            </p>
+            <div className="row" style={{ justifyContent: 'flex-end' }}>
+              <button className="secondary" onClick={() => setToDelete(null)}>Cancel</button>
+              <button className="danger-solid" onClick={confirmDelete}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

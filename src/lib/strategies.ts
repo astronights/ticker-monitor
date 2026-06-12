@@ -1,4 +1,4 @@
-import { bollinger, ema, macd, rsi, sma } from './indicators';
+import { bollinger, donchian, ema, macd, roc, rsi, sma, stochastic } from './indicators';
 import type { Candle, Signal, StrategyDef } from './types';
 
 function crossSignals(fastArr: number[], slowArr: number[]): Signal[] {
@@ -87,6 +87,68 @@ export const STRATEGIES: StrategyDef[] = [
         out.push(pos);
       }
       return out;
+    },
+  },
+  {
+    key: 'donchian_breakout',
+    label: 'Donchian Breakout',
+    params: [
+      { key: 'entry', label: 'Entry lookback', default: 20, min: 5, max: 200 },
+      { key: 'exit', label: 'Exit lookback', default: 10, min: 3, max: 100 },
+    ],
+    run: (candles, p) => {
+      const highs = candles.map((c) => c.h);
+      const lows = candles.map((c) => c.l);
+      const { upper } = donchian(highs, lows, p.entry);
+      const { lower } = donchian(highs, lows, p.exit);
+      const out: Signal[] = [];
+      let pos: Signal = 'flat';
+      for (let i = 0; i < candles.length; i++) {
+        if (!Number.isNaN(upper[i])) {
+          if (pos === 'flat' && candles[i].c > upper[i]) pos = 'long';
+          else if (pos === 'long' && !Number.isNaN(lower[i]) && candles[i].c < lower[i]) pos = 'flat';
+        }
+        out.push(pos);
+      }
+      return out;
+    },
+  },
+  {
+    key: 'stochastic_reversion',
+    label: 'Stochastic Reversion',
+    params: [
+      { key: 'period', label: '%K period', default: 14, min: 3, max: 100 },
+      { key: 'buyBelow', label: 'Buy below', default: 20, min: 5, max: 40 },
+      { key: 'sellAbove', label: 'Sell above', default: 80, min: 60, max: 95 },
+    ],
+    run: (candles, p) => {
+      const { d } = stochastic(
+        candles.map((c) => c.h),
+        candles.map((c) => c.l),
+        candles.map((c) => c.c),
+        p.period
+      );
+      const out: Signal[] = [];
+      let pos: Signal = 'flat';
+      for (let i = 0; i < candles.length; i++) {
+        if (!Number.isNaN(d[i])) {
+          if (pos === 'flat' && d[i] < p.buyBelow) pos = 'long';
+          else if (pos === 'long' && d[i] > p.sellAbove) pos = 'flat';
+        }
+        out.push(pos);
+      }
+      return out;
+    },
+  },
+  {
+    key: 'roc_momentum',
+    label: 'Momentum (ROC)',
+    params: [
+      { key: 'period', label: 'Lookback', default: 60, min: 5, max: 300 },
+    ],
+    run: (candles, p) => {
+      const r = roc(candles.map((c) => c.c), p.period);
+      return r.map((v) => (Number.isNaN(v) ? 'flat' : v > 0 ? 'long' : 'flat'));
     },
   },
 ];
