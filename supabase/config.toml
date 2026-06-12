@@ -1,0 +1,3 @@
+# Minimal config for the Supabase CLI (used by CI to apply migrations).
+# project_id here is just the local workspace name, not the cloud project ref.
+project_id = "ticker-monitor"

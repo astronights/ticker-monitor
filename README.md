@@ -29,9 +29,13 @@ Next.js PWA on Vercel
 
 1. Create a free project at [supabase.com](https://supabase.com).
 2. In **Database → Extensions**, enable `pg_cron` and `pg_net`.
-3. In the **SQL editor**, run the whole of [`supabase/schema.sql`](supabase/schema.sql)
-   (creates tables and seeds the starter tickers). Skip the commented cron block for now —
-   you need the Vercel URL first.
+3. Apply the schema, either way (the SQL is idempotent, so doing both is harmless):
+   - **Manually:** in the **SQL editor**, run the whole of
+     [`supabase/migrations/20260612000000_init.sql`](supabase/migrations/20260612000000_init.sql), or
+   - **Via CI:** set the GitHub secrets from the CI/CD section below; merging to `main`
+     applies any new files in `supabase/migrations/` automatically.
+
+   Skip the commented cron block at the bottom for now — you need the Vercel URL first.
 4. From **Project Settings → API**, note the **Project URL** and the
    **service_role key**.
 
@@ -53,7 +57,8 @@ npx web-push generate-vapid-keys
 ### 4. Schedule collection
 
 Back in the Supabase SQL editor, run the cron block from the bottom of
-`supabase/schema.sql` with your real Vercel URL and `CRON_SECRET` filled in. It pings
+`supabase/migrations/20260612000000_init.sql` with your real Vercel URL and
+`CRON_SECRET` filled in. It pings
 the app every 15 minutes on weekdays; the app itself skips tickers whose home market
 is closed, so one schedule covers US, India, and Singapore hours.
 
@@ -65,6 +70,25 @@ is closed, so one schedule covers US, India, and Singapore hours.
 3. On your phone, open the site and **Add to Home Screen** (required for push on iOS),
    then on the Live page create an alert with **🔔 Watch** and accept the
    notification permission.
+
+## CI/CD
+
+Two GitHub Actions workflows (`.github/workflows/`):
+
+- **`ci.yml`** — on every PR to `main` (and pushes to `main`): installs deps, builds
+  the app (type-check + lint), and runs the strategy-engine sanity tests (`npm test`).
+  Make it required: GitHub repo → Settings → Branches → add a branch protection rule
+  for `main` requiring the **build-and-test** check.
+- **`migrate.yml`** — on pushes to `main` that touch `supabase/migrations/`: applies
+  pending migrations to your Supabase project with `supabase db push`. Needs three
+  repository secrets (GitHub repo → Settings → Secrets and variables → Actions):
+  - `SUPABASE_ACCESS_TOKEN` — personal access token from
+    [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens)
+  - `SUPABASE_PROJECT_ID` — the project ref (the subdomain in your project URL)
+  - `SUPABASE_DB_PASSWORD` — the database password you chose at project creation
+
+Future schema changes go in as new timestamped files in `supabase/migrations/` and
+apply themselves on merge.
 
 ## Local development
 
