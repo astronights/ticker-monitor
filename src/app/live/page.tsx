@@ -181,15 +181,25 @@ function LiveInner() {
               last price {candles[candles.length - 1]?.c.toFixed(2)}
             </span>
           </div>
-          {markers.length > 0 && (
-            <div className="muted" style={{ fontWeight: 400, fontSize: 13, marginTop: 4 }}>
-              Last flip: {markers[markers.length - 1].side.toUpperCase()} @{' '}
-              {markers[markers.length - 1].price.toFixed(2)} ·{' '}
-              {new Date(markers[markers.length - 1].ts * 1000).toLocaleString([], {
-                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-              })}
-            </div>
-          )}
+          {markers.length > 0 && (() => {
+            const flip = markers[markers.length - 1];
+            const last = candles[candles.length - 1];
+            const driftPct = (last.c / flip.price - 1) * 100;
+            const staleMin = Math.round(Date.now() / 60000 - last.ts / 60);
+            return (
+              <div className="muted" style={{ fontWeight: 400, fontSize: 13, marginTop: 4 }}>
+                Signal: {flip.side.toUpperCase()} @ {flip.price.toFixed(2)} ·{' '}
+                {new Date(flip.ts * 1000).toLocaleString([], {
+                  month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                })}{' '}
+                — price since then{' '}
+                <span className={driftPct >= 0 ? 'pos' : 'neg'}>
+                  {driftPct >= 0 ? '+' : ''}{driftPct.toFixed(2)}%
+                </span>{' '}
+                · data as of {staleMin <= 1 ? 'now' : `${staleMin}m ago`}
+              </div>
+            );
+          })()}
         </div>
       )}
 
