@@ -122,6 +122,30 @@ export function roc(values: number[], period: number): number[] {
   return out;
 }
 
+/** Average True Range over `period` bars (Wilder's smoothing). */
+export function atr(highs: number[], lows: number[], closes: number[], period: number): number[] {
+  const out = new Array<number>(closes.length).fill(NaN);
+  let smoothed = NaN;
+  for (let i = 1; i < closes.length; i++) {
+    const tr = Math.max(
+      highs[i] - lows[i],
+      Math.abs(highs[i] - closes[i - 1]),
+      Math.abs(lows[i] - closes[i - 1])
+    );
+    if (i < period) {
+      if (Number.isNaN(smoothed)) smoothed = 0;
+      smoothed += tr / period;
+    } else if (i === period) {
+      smoothed = smoothed! + tr / period;
+      out[i] = smoothed;
+    } else {
+      smoothed = (smoothed * (period - 1) + tr) / period;
+      out[i] = smoothed;
+    }
+  }
+  return out;
+}
+
 /** Rolling highest-high / lowest-low over the previous `period` bars (excluding current). */
 export function donchian(
   highs: number[],
