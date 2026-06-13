@@ -174,19 +174,37 @@ function LiveInner() {
 
       {signal && (
         <div className={`signal-banner ${signal}`}>
-          {symbol} · {strategy.label} ({interval}):{' '}
-          {signal === 'long' ? '🟢 IN POSITION / BUY zone' : '⚪ FLAT / stay out'}
-          <span className="muted" style={{ fontWeight: 400, marginLeft: 10 }}>
-            last price {candles[candles.length - 1]?.c.toFixed(2)}
-          </span>
+          <div>
+            {symbol} · {strategy.label} ({interval}):{' '}
+            {signal === 'long' ? '🟢 BUY / stay invested' : '⚪ SELL / stay in cash'}
+            <span className="muted" style={{ fontWeight: 400, marginLeft: 10 }}>
+              last price {candles[candles.length - 1]?.c.toFixed(2)}
+            </span>
+          </div>
+          {markers.length > 0 && (
+            <div className="muted" style={{ fontWeight: 400, fontSize: 13, marginTop: 4 }}>
+              Last flip: {markers[markers.length - 1].side.toUpperCase()} @{' '}
+              {markers[markers.length - 1].price.toFixed(2)} ·{' '}
+              {new Date(markers[markers.length - 1].ts * 1000).toLocaleString([], {
+                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+              })}
+            </div>
+          )}
         </div>
       )}
 
       <div className="panel">
         <Chart candles={candles} markers={markers} />
-        {candles.length < 30 && (
+        {candles.length < 30 ? (
           <p className="muted">
             Not enough intraday data yet — backfill from the dashboard, or wait for collection.
+          </p>
+        ) : (
+          <p className="muted" style={{ marginBottom: 0 }}>
+            ▲▼ mark every point where this strategy flipped in the past 30 days. The banner above
+            is its <em>current</em> stance; it re-evaluates as each new {interval} bar completes
+            (prices refresh every 15 min during market hours). A push alert fires only when the
+            stance flips — if you&apos;re watching this combo.
           </p>
         )}
       </div>

@@ -1,6 +1,6 @@
 {
-  "name": "Ticker Monitor",
-  "short_name": "Tickers",
+  "name": "Alerts",
+  "short_name": "Alerts",
   "description": "Personal ETF & commodity strategy monitor",
   "start_url": "/",
   "display": "standalone",

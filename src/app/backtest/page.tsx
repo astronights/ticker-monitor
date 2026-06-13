@@ -17,32 +17,12 @@ const RANGES = [
   { label: '2Y', days: 730 },
 ];
 
-// Grid search sweeps every interval over every window its data can support
-// (intraday history is capped at ~60 days by Yahoo).
-const GRID_PLAN: { interval: string; fetchDays: number; windows: { label: string; days: number }[] }[] = [
-  { interval: '15m', fetchDays: 60, windows: [{ label: '1M', days: 30 }, { label: '2M', days: 60 }] },
-  { interval: '1h', fetchDays: 60, windows: [{ label: '1M', days: 30 }, { label: '2M', days: 60 }] },
-  {
-    interval: '1d',
-    fetchDays: 730,
-    windows: [
-      { label: '3M', days: 91 },
-      { label: '6M', days: 182 },
-      { label: '1Y', days: 365 },
-      { label: '2Y', days: 730 },
-    ],
-  },
-];
-
 interface GridRow {
   id: string;
   strategy: string;
   label: string;
   params: Record<string, number>;
   paramsStr: string;
-  interval: string;
-  window: string;
-  windowDays: number;
   stats: BacktestStats;
 }
 
@@ -125,51 +105,40 @@ export default function BacktestPage() {
     setError('');
     setGridRows(null);
     try {
+      // Locked to the ticker / bars / window selected above.
+      const qs = new URLSearchParams({
+        ticker_id: String(tickerId),
+        interval,
+        from: new Date(Date.now() - rangeDays * 86400_000).toISOString(),
+      });
+      const res = await fetch(`/api/candles?${qs}`);
+      const data: Candle[] = await res.json();
+      if (!res.ok) throw new Error((data as unknown as { error: string }).error);
+      if (data.length < 60) {
+        throw new Error(
+          `Only ${data.length} bars in this window — not enough for a grid search. ` +
+            `Try the Daily interval, a different window, or backfill more history.`
+        );
+      }
+      const combos = STRATEGIES.flatMap((def) => paramGrid(def).map((p) => ({ def, p })));
       const rows: GridRow[] = [];
-      // Build the full task list first so progress is meaningful.
-      const tasks: { interval: string; window: { label: string; days: number }; candles: Candle[] }[] = [];
-      for (const plan of GRID_PLAN) {
-        const qs = new URLSearchParams({
-          ticker_id: String(tickerId),
-          interval: plan.interval,
-          from: new Date(Date.now() - plan.fetchDays * 86400_000).toISOString(),
-        });
-        const res = await fetch(`/api/candles?${qs}`);
-        if (!res.ok) continue;
-        const all: Candle[] = await res.json();
-        for (const window of plan.windows) {
-          const cutoff = Date.now() / 1000 - window.days * 86400;
-          const slice = all.filter((c) => c.ts >= cutoff);
-          if (slice.length >= 60) tasks.push({ interval: plan.interval, window, candles: slice });
-        }
-      }
-      const combos = STRATEGIES.flatMap((def) =>
-        paramGrid(def).map((p) => ({ def, p }))
-      );
-      const total = tasks.length * combos.length;
       let done = 0;
-      for (const task of tasks) {
-        for (const { def, p } of combos) {
-          const result = backtest(def.key, task.candles, p, task.interval);
-          rows.push({
-            id: `${def.key}-${task.interval}-${task.window.label}-${JSON.stringify(p)}`,
-            strategy: def.key,
-            label: def.label,
-            params: p,
-            paramsStr: def.params.map((pd) => `${pd.label.toLowerCase()} ${p[pd.key]}`).join(' · '),
-            interval: task.interval,
-            window: task.window.label,
-            windowDays: task.window.days,
-            stats: result.stats,
-          });
-          done++;
-          if (done % 50 === 0) {
-            setGridProgress(`Testing combination ${done} of ${total}…`);
-            await new Promise((r) => setTimeout(r, 0)); // let the UI breathe
-          }
+      for (const { def, p } of combos) {
+        const result = backtest(def.key, data, p, interval);
+        rows.push({
+          id: `${def.key}-${JSON.stringify(p)}`,
+          strategy: def.key,
+          label: def.label,
+          params: p,
+          paramsStr: def.params.map((pd) => `${pd.label.toLowerCase()} ${p[pd.key]}`).join(' · '),
+          stats: result.stats,
+        });
+        done++;
+        if (done % 20 === 0) {
+          setGridProgress(`Testing combination ${done} of ${combos.length}…`);
+          await new Promise((r) => setTimeout(r, 0)); // let the UI breathe
         }
       }
-      if (!rows.length) throw new Error('Not enough data for any interval/window — backfill first.');
       setGridRows(rows);
       setGridProgress('');
     } catch (e) {
@@ -182,8 +151,6 @@ export default function BacktestPage() {
   function applyCombo(row: GridRow) {
     setSelected(new Set([row.strategy]));
     setParams((cur) => ({ ...cur, [row.strategy]: { ...cur[row.strategy], ...row.params } }));
-    setInterval_(row.interval);
-    setRangeDays(row.windowDays);
     setResults(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -265,7 +232,7 @@ export default function BacktestPage() {
           disabled={busy}
           style={{ width: '100%', marginTop: 8 }}
         >
-          {gridProgress || '🔍 Grid search — every strategy, parameter set, interval & window'}
+          {gridProgress || '🔍 Grid search — every strategy & parameter set on this ticker/bars/window'}
         </button>
       </div>
 
@@ -408,7 +375,8 @@ export default function BacktestPage() {
       {sortedGrid && (
         <div className="panel">
           <h2 style={{ marginTop: 0 }}>
-            Grid search — {tickers.find((t) => t.id === tickerId)?.symbol}{' '}
+            Grid search — {tickers.find((t) => t.id === tickerId)?.symbol} ·{' '}
+            {interval} · {RANGES.find((r) => r.days === rangeDays)?.label ?? `${rangeDays}d`}{' '}
             <span className="muted" style={{ fontWeight: 400 }}>
               top 40 of {sortedGrid.length} combinations
             </span>
@@ -418,8 +386,6 @@ export default function BacktestPage() {
               <thead>
                 <tr>
                   <th>Strategy</th>
-                  <th>Bars</th>
-                  <th>Window</th>
                   <th className={`num sortable ${sortKey === 'return' ? 'sorted' : ''}`} onClick={() => setSortKey('return')}>
                     Return ↓
                   </th>
@@ -443,8 +409,6 @@ export default function BacktestPage() {
                       <strong>{r.label}</strong>
                       <div className="muted" style={{ fontSize: 12 }}>{r.paramsStr}</div>
                     </td>
-                    <td>{r.interval}</td>
-                    <td>{r.window}</td>
                     <td className={`num ${r.stats.totalReturnPct >= 0 ? 'pos' : 'neg'}`}>
                       {r.stats.totalReturnPct.toFixed(1)}%
                     </td>
@@ -461,7 +425,6 @@ export default function BacktestPage() {
             Tap a column header to re-rank, tap a row to load that combination into the controls
             above. Beware overfitting: the top result is the best <em>past</em> fit, not a
             guarantee — prefer combos that also score well on Sharpe and have a sane trade count.
-            Returns across different windows aren&apos;t directly comparable.
           </p>
         </div>
       )}
