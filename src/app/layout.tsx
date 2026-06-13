@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: 'Ticker Monitor',
   description: 'Personal ETF & commodity strategy monitor',
   manifest: '/manifest.webmanifest',
-  appleWebApp: { capable: true, title: 'Ticker Monitor', statusBarStyle: 'black-translucent' },
+  appleWebApp: { capable: true, title: 'Alerts', statusBarStyle: 'black-translucent' },
 };
 
 export const viewport: Viewport = {
