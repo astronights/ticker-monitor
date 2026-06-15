@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Chart from '@/components/Chart';
 import { STRATEGIES, defaultParams, runStrategy } from '@/lib/strategies';
+import { atr } from '@/lib/indicators';
 import type { Candle, Ticker } from '@/lib/types';
 
 interface AlertRow {
@@ -60,8 +61,11 @@ function LiveInner() {
     return () => window.clearInterval(t);
   }, [loadCandles]);
 
-  const { signal, markers } = useMemo(() => {
-    if (candles.length < 30) return { signal: null, markers: [] };
+  const ATR_PERIOD = 14;
+  const ATR_MULT = 1.0; // zone = flip price ± 1 ATR
+
+  const { signal, markers, entryZone } = useMemo(() => {
+    if (candles.length < 30) return { signal: null, markers: [], entryZone: null };
     const signals = runStrategy(strategyKey, candles, params[strategyKey]);
     const markers: { ts: number; side: 'buy' | 'sell'; price: number }[] = [];
     for (let i = 1; i < signals.length; i++) {
@@ -73,7 +77,28 @@ function LiveInner() {
         });
       }
     }
-    return { signal: signals[signals.length - 1], markers };
+
+    // Compute entry zone based on ATR at the time of the last signal flip
+    let entryZone: { low: number; high: number; atrVal: number } | null = null;
+    if (markers.length > 0) {
+      const flip = markers[markers.length - 1];
+      const flipIdx = candles.findIndex((c) => c.ts === flip.ts);
+      const slice = flipIdx >= ATR_PERIOD ? candles.slice(0, flipIdx + 1) : candles.slice(0, ATR_PERIOD + 1);
+      const atrArr = atr(
+        slice.map((c) => c.h),
+        slice.map((c) => c.l),
+        slice.map((c) => c.c),
+        ATR_PERIOD
+      );
+      const atrVal = atrArr.findLast((v) => !Number.isNaN(v)) ?? 0;
+      entryZone = {
+        low: flip.price - ATR_MULT * atrVal,
+        high: flip.price + ATR_MULT * atrVal,
+        atrVal,
+      };
+    }
+
+    return { signal: signals[signals.length - 1], markers, entryZone };
   }, [candles, strategyKey, params]);
 
   async function enablePushAndWatch() {
@@ -186,18 +211,34 @@ function LiveInner() {
             const last = candles[candles.length - 1];
             const driftPct = (last.c / flip.price - 1) * 100;
             const staleMin = Math.round(Date.now() / 60000 - last.ts / 60);
+            const inZone = entryZone ? last.c >= entryZone.low && last.c <= entryZone.high : true;
             return (
-              <div className="muted" style={{ fontWeight: 400, fontSize: 13, marginTop: 4 }}>
-                Signal: {flip.side.toUpperCase()} @ {flip.price.toFixed(2)} ·{' '}
-                {new Date(flip.ts * 1000).toLocaleString([], {
-                  month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-                })}{' '}
-                — price since then{' '}
-                <span className={driftPct >= 0 ? 'pos' : 'neg'}>
-                  {driftPct >= 0 ? '+' : ''}{driftPct.toFixed(2)}%
-                </span>{' '}
-                · data as of {staleMin <= 1 ? 'now' : `${staleMin}m ago`}
-              </div>
+              <>
+                <div className="muted" style={{ fontWeight: 400, fontSize: 13, marginTop: 4 }}>
+                  Signal: {flip.side.toUpperCase()} @ {flip.price.toFixed(2)} ·{' '}
+                  {new Date(flip.ts * 1000).toLocaleString([], {
+                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                  })}{' '}
+                  — price since then{' '}
+                  <span className={driftPct >= 0 ? 'pos' : 'neg'}>
+                    {driftPct >= 0 ? '+' : ''}{driftPct.toFixed(2)}%
+                  </span>{' '}
+                  · data as of {staleMin <= 1 ? 'now' : `${staleMin}m ago`}
+                </div>
+                {entryZone && (
+                  <div style={{ fontWeight: 600, fontSize: 13, marginTop: 6 }}>
+                    Entry zone: {entryZone.low.toFixed(2)} – {entryZone.high.toFixed(2)}{' '}
+                    <span className="muted" style={{ fontWeight: 400 }}>
+                      (±1 ATR of {entryZone.atrVal.toFixed(2)})
+                    </span>{' '}
+                    · current {last.c.toFixed(2)}{' '}
+                    {inZone
+                      ? <span className="pos">✓ within range</span>
+                      : <span className="neg">⚠ price moved too far — consider waiting</span>
+                    }
+                  </div>
+                )}
+              </>
             );
           })()}
         </div>

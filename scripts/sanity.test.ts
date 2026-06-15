@@ -1,6 +1,6 @@
 /** Strategy-engine sanity tests, run in CI via `npx tsx scripts/sanity.test.ts`. */
 import assert from 'node:assert/strict';
-import { sma, ema, rsi } from '../src/lib/indicators';
+import { sma, ema, rsi, atr } from '../src/lib/indicators';
 import { backtest } from '../src/lib/backtest';
 import { aggregateToHourly } from '../src/lib/aggregate';
 import { STRATEGIES, defaultParams, paramGrid } from '../src/lib/strategies';
@@ -18,6 +18,15 @@ assert.ok(Math.abs(e[2] - 2) < 1e-9);
 
 const r = rsi(Array.from({ length: 20 }, (_, i) => 100 + i), 14);
 assert.equal(r[19], 100, 'RSI of a monotonic rise should be 100');
+
+const atrArr = atr(
+  Array.from({ length: 20 }, () => 105),
+  Array.from({ length: 20 }, () => 95),
+  Array.from({ length: 20 }, () => 100),
+  14
+);
+assert.ok(Number.isNaN(atrArr[13]), 'ATR warm-up period');
+assert.ok(atrArr[14] > 0, 'ATR positive after warm-up');
 
 // --- aggregation: four 15m bars in one hour -> one 1h bar ---
 const m15: Candle[] = [0, 900, 1800, 2700].map((off, i) => ({

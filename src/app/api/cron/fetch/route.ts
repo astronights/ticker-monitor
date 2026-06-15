@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { aggregateToHourly } from '@/lib/aggregate';
+import { atr } from '@/lib/indicators';
 import { isMarketOpen } from '@/lib/marketHours';
 import { sendPushToAll } from '@/lib/push';
 import { runStrategy } from '@/lib/strategies';
@@ -81,6 +82,17 @@ export async function POST(req: NextRequest) {
 
       if (alert.last_signal && current !== alert.last_signal) {
         const side = current === 'long' ? 'buy' : 'sell';
+        // Entry zone: ±1 ATR(14) around the signal price, so the user can tell
+        // whether the price is still actionable after opening their broker app.
+        const atrArr = atr(
+          candles.map((c) => c.h),
+          candles.map((c) => c.l),
+          candles.map((c) => c.c),
+          14
+        );
+        const atrVal = atrArr.findLast((v) => !Number.isNaN(v)) ?? 0;
+        const low = lastBar.c - atrVal;
+        const high = lastBar.c + atrVal;
         await sb.from('signals').insert({
           alert_id: alert.id,
           ticker_id: ticker.id,
@@ -90,8 +102,8 @@ export async function POST(req: NextRequest) {
           bar_ts: new Date(lastBar.ts * 1000).toISOString(),
         });
         await sendPushToAll(
-          `${ticker.symbol}: ${side.toUpperCase()} signal`,
-          `${alert.strategy} (${alert.signal_interval}) at ${lastBar.c.toFixed(2)}`,
+          `${ticker.symbol}: ${side.toUpperCase()} @ ${lastBar.c.toFixed(2)}`,
+          `${alert.strategy} (${alert.signal_interval}) · entry zone ${low.toFixed(2)}–${high.toFixed(2)}`,
           `/live?ticker=${ticker.id}&strategy=${alert.strategy}`
         );
         notified.push(`${ticker.symbol}:${side}`);
