@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Chart from '@/components/Chart';
 import { backtest } from '@/lib/backtest';
 import { STRATEGIES, defaultParams, paramGrid } from '@/lib/strategies';
+import { usePersistedState } from '@/lib/usePersistedState';
 import type { BacktestResult, BacktestStats, Candle, Ticker } from '@/lib/types';
 
 const COLORS = ['#2f81f7', '#d2a8ff', '#ffa657', '#39c5cf', '#ff7b72', '#7ee787', '#f778ba', '#a5d6ff'];
@@ -36,12 +37,17 @@ const SORT_FNS: Record<SortKey, (r: GridRow) => number> = {
 
 export default function BacktestPage() {
   const [tickers, setTickers] = useState<Ticker[]>([]);
-  const [tickerId, setTickerId] = useState<number | null>(null);
-  const [interval, setInterval_] = useState('15m');
-  const [rangeDays, setRangeDays] = useState(30);
+  const [tickerId, setTickerId] = usePersistedState<number | null>('bt-ticker', null);
+  const [interval, setInterval_] = usePersistedState('bt-interval', '15m');
+  const [rangeDays, setRangeDays] = usePersistedState('bt-range', 30);
   const [focus, setFocus] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set(['sma_cross', 'rsi_reversion']));
-  const [params, setParams] = useState<Record<string, Record<string, number>>>(
+  const [selectedList, setSelectedList] = usePersistedState<string[]>(
+    'bt-selected',
+    ['sma_cross', 'rsi_reversion']
+  );
+  const selected = useMemo(() => new Set(selectedList), [selectedList]);
+  const [params, setParams] = usePersistedState<Record<string, Record<string, number>>>(
+    'bt-params',
     Object.fromEntries(STRATEGIES.map((s) => [s.key, defaultParams(s)]))
   );
   const [results, setResults] = useState<BacktestResult[] | null>(null);
@@ -62,10 +68,7 @@ export default function BacktestPage() {
   }, []);
 
   function toggle(key: string) {
-    const next = new Set(selected);
-    if (next.has(key)) next.delete(key);
-    else next.add(key);
-    setSelected(next);
+    setSelectedList((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]));
   }
 
   async function run() {
@@ -104,6 +107,9 @@ export default function BacktestPage() {
     setBusy(true);
     setError('');
     setGridRows(null);
+    // Clear the per-strategy run output so the page shows only grid results.
+    setResults(null);
+    setFocus(null);
     try {
       // Locked to the ticker / bars / window selected above.
       const qs = new URLSearchParams({
@@ -149,7 +155,7 @@ export default function BacktestPage() {
   }
 
   function applyCombo(row: GridRow) {
-    setSelected(new Set([row.strategy]));
+    setSelectedList([row.strategy]);
     setParams((cur) => ({ ...cur, [row.strategy]: { ...cur[row.strategy], ...row.params } }));
     setResults(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -261,6 +267,7 @@ export default function BacktestPage() {
                           min={p.min}
                           max={p.max}
                           value={params[s.key][p.key]}
+                          onFocus={(e) => e.target.select()}
                           onChange={(e) =>
                             setParams({
                               ...params,

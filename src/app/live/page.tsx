@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Chart from '@/components/Chart';
 import { STRATEGIES, defaultParams, runStrategy } from '@/lib/strategies';
 import { atr } from '@/lib/indicators';
+import { usePersistedState } from '@/lib/usePersistedState';
 import type { Candle, Ticker } from '@/lib/types';
 
 interface AlertRow {
@@ -19,12 +20,11 @@ interface AlertRow {
 function LiveInner() {
   const search = useSearchParams();
   const [tickers, setTickers] = useState<Ticker[]>([]);
-  const [tickerId, setTickerId] = useState<number | null>(
-    search.get('ticker') ? Number(search.get('ticker')) : null
-  );
-  const [strategyKey, setStrategyKey] = useState(search.get('strategy') ?? 'sma_cross');
-  const [interval, setInterval_] = useState<'15m' | '1h'>('15m');
-  const [params, setParams] = useState<Record<string, Record<string, number>>>(
+  const [tickerId, setTickerId] = usePersistedState<number | null>('live-ticker', null);
+  const [strategyKey, setStrategyKey] = usePersistedState('live-strategy', 'sma_cross');
+  const [interval, setInterval_] = usePersistedState<'15m' | '1h'>('live-interval', '15m');
+  const [params, setParams] = usePersistedState<Record<string, Record<string, number>>>(
+    'live-params',
     Object.fromEntries(STRATEGIES.map((s) => [s.key, defaultParams(s)]))
   );
   const [candles, setCandles] = useState<Candle[]>([]);
@@ -32,6 +32,17 @@ function LiveInner() {
   const [pushState, setPushState] = useState('');
 
   const strategy = STRATEGIES.find((s) => s.key === strategyKey)!;
+
+  // Deep links from push notifications (?ticker=&strategy=) override the
+  // persisted selection. Registered after usePersistedState's load effects, so
+  // it wins on mount.
+  useEffect(() => {
+    const t = search.get('ticker');
+    const s = search.get('strategy');
+    if (t) setTickerId(Number(t));
+    if (s) setStrategyKey(s);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   useEffect(() => {
     fetch('/api/tickers')
@@ -41,6 +52,7 @@ function LiveInner() {
         setTickerId((cur) => cur ?? data[0]?.id ?? null);
       });
     loadAlerts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadAlerts = () =>
@@ -184,6 +196,7 @@ function LiveInner() {
                 <input
                   type="number"
                   value={params[strategyKey][p.key]}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) =>
                     setParams({
                       ...params,
